@@ -25,22 +25,6 @@ heat_conf["suse"] = { :packages => ["openstack-heat-engine","openstack-heat-api"
                      :aux_dirs => ["/var/cache/heat"]
 }
 
-#case node.platform
-#    when "ubuntu"
-#        puts "Installing heat on Ubuntu..."
-#        used_packages = heat_conf[:ubuntu_packages]
-#        used_services = heat_conf[:ubuntu_services]
-#        aux_dirs = heat_conf[:ubuntu_aux_dirs]
-#    when "suse"
-#        puts "Installing heat Suse"
-#        used_packages = heat_conf[:suse_packages]
-#        used_services = heat_conf[:suse_services]
-#        aux_dirs = heat_conf[:suse_aux_dirs]
-#    else
-#        raise RuntimeError, 'ERROR: Failed to determine OS aborting...'
-#end
-
-
 heat_path = "/opt/heat"
 venv_path = node[:heat][:use_virtualenv] ? "#{heat_path}/.venv" : nil
 venv_prefix = node[:heat][:use_virtualenv] ? ". #{venv_path}/bin/activate &&" : nil
@@ -51,15 +35,6 @@ venv_prefix = node[:heat][:use_virtualenv] ? ". #{venv_path}/bin/activate &&" : 
 node.set_unless[:heat][:db][:password] = secure_password
 env_filter = " AND database_config_environment:database-config-#{node[:heat][:database_instance]}"
 sql = search(:node, "roles:database-server#{env_filter}").first || node
-
-
-#sqls = search(:node, "roles:database-server#{env_filter}") || []
-#if sqls.length > 0
-#    sql = sqls[0]
-#    sql = node if sql.name == node.name
-#else
-#    sql = node
-#end
 
 include_recipe "database::client"
 backend_name = Chef::Recipe::Database::Util.get_backend_name(sql)
@@ -110,18 +85,6 @@ unless node[:heat][:use_gitrepo]
         puts "Processing cookbook: #{@cookbook_name} package: #{p} platform: #{node.platform}"
         package p
     end
-
-#  unless node.platform == "suse"
-#    package "heat-api"
-#    package "python-heatclient"
-#  else
-#    package "openstack-heat-api"
-#    package "openstack-heat-api-cfn"
-#    package "openstack-heat-api-cloudwatch"
-#    package "openstack-heat-engine"
-#    package "python-heatclient"
-#  end
-#  venv_prefix = nil
 else
     puts "Instaling from sources, cookbook: #{@cookbook_name} platform: #{node.platform}"
     pfs_and_install_deps @cookbook_name do
@@ -144,41 +107,9 @@ else
         end
     end
 end
-#  heat_path = "/opt/heat"
-#  pfs_and_install_deps("heat")
-#  link_service "heat-api"
-#  link_service "heat-engine"
-#  link_service "heat-api-cfn"
-#  link_service "heat-api-cloudwatch"
-#  create_user_and_dirs("heat")
-#  execute "cp_policy.json" do
-#    command "cp #{heat_path}/etc/heat/policy.json /etc/heat"
-#    creates "/etc/heat/policy.json"
-#  end
-#  venv_path = node[:heat][:use_virtualenv] ? "#{heat_path}/.venv" : nil
-#  venv_prefix = node[:heat][:use_virtualenv] ? ". #{venv_path}/bin/activate &&" : nil
-#end
-
 include_recipe "#{@cookbook_name}::common"
-
-#directory "/var/cache/heat" do
-#  owner node[:heat][:user]
-#  group "root"
-#  mode 00755
-#  action :create
-#end unless node.platform == "suse"
-
 env_filter = " AND rabbitmq_config_environment:rabbitmq-config-#{node[:heat][:rabbitmq_instance]}"
 rabbit = search(:node, "roles:rabbitmq-server#{env_filter}").first || node
-
-#rabbits = search(:node, "roles:rabbitmq-server#{env_filter}") || []
-#if rabbits.length > 0
-#  rabbit = rabbits[0]
-#  rabbit = node if rabbit.name == node.name
-#else
-#  rabbit = node
-#end
-
 rabbit_address = Chef::Recipe::Barclamp::Inventory.get_network_by_type(rabbit, "admin").address
 Chef::Log.info("Rabbit server found at #{rabbit_address}")
 rabbit_settings = {
@@ -191,15 +122,6 @@ rabbit_settings = {
 
 env_filter = " AND keystone_config_environment:keystone-config-#{node[:heat][:keystone_instance]}"
 keystone = search(:node, "recipes:keystone\\:\\:server#{env_filter}").first || node
-
-#keystones = search(:node, "recipes:keystone\\:\\:server#{env_filter}") || []
-#if keystones.length > 0
-#  keystone = keystones[0]
-#  keystone = node if keystone.name == node.name
-#else
-#  keystone = node
-#end
-
 keystone_host = keystone[:fqdn]
 keystone_protocol = keystone["keystone"]["api"]["protocol"]
 keystone_token = keystone["keystone"]["service"]["token"]
@@ -231,10 +153,6 @@ if node.roles.include? "heat-server"
 else
   # pickup password to database from heat-server node
   node_controllers = search(:node, "roles:heat-server").first || []
-#  node_controllers = search(:node, "roles:heat-server") || []
-#  if node_controllers.length > 0
-#    db_password = node_controllers[0][:heat][:db][:password]
-#  end
 end
 
 
