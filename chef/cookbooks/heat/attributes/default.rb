@@ -44,6 +44,8 @@ default[:heat][:keystone_service_password] = ""
 
 default[:heat][:api][:protocol] = "http"
 default[:heat][:api][:cfn_port] = 8000
+default[:heat][:api][:engine_port] = 8001
+default[:heat][:api][:cloud_watch_port] = 8003
 default[:heat][:api][:port] = 8004
 
 default[:heat][:metering_secret] = "" # Set by Recipe
