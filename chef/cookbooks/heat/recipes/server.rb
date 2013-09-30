@@ -15,22 +15,9 @@
 
 ::Chef::Recipe.send(:include, Opscode::OpenSSL::Password)
 
-heat_conf = {}
-heat_conf["ubuntu"] = { :packages => ["heat-engine","heat-api","heat-api-cfn","heat-api-cloudwatch"],
-                       :services => ["heat-engine","heat-api","heat-api-cfn","heat-api-cloudwatch"],
-                       :aux_dirs => ["/var/cache/heat"]
-}
-heat_conf["suse"] = { :packages => ["openstack-heat-engine","openstack-heat-api","openstack-heat-api-cfn","openstack-heat-api-cloudwatch","python-heatclient"],
-                     :services => ["openstack-heat-engine","openstack-heat-api","openstack-heat-api-cfn","openstack-heat-api-cloudwatch"],
-                     :aux_dirs => ["/var/cache/heat"]
-}
-
 heat_path = "/opt/heat"
 venv_path = node[:heat][:use_virtualenv] ? "#{heat_path}/.venv" : nil
 venv_prefix = node[:heat][:use_virtualenv] ? ". #{venv_path}/bin/activate &&" : nil
-
-
-
 
 node.set_unless[:heat][:db][:password] = secure_password
 env_filter = " AND database_config_environment:database-config-#{node[:heat][:database_instance]}"
@@ -81,7 +68,7 @@ database_user "grant database access for heat database user" do
 end
 
 unless node[:heat][:use_gitrepo]
-    heat_conf[node.platform][:packages].each do |p|
+    node[:heat][:platform][:packages].each do |p|
         puts "Processing cookbook: #{@cookbook_name} package: #{p} platform: #{node.platform}"
         package p
     end
@@ -92,12 +79,12 @@ else
         path heat_path
     end
     
-    heat_conf[node.platform][:services].each do |s|
+    node[:heat][:platform][:services].each do |s|
         puts "Linking #{s}..."
         link_service s
     end 
    
-    heat_conf[node.platform][:aux_dirs].each do |d|
+    node[:heat][:platform][:aux_dirs].each do |d|
         puts "Creating auxilary directory #{d}..." 
         directory d do
            owner node[:heat][:user]
