@@ -19,7 +19,7 @@
       "pfs_deps": [
         "pip://python-heatclient"
       ],
-      "use_virtualenv": true,
+      "use_virtualenv": false,
       "api": {
         "protocol": "http",
         "cfn_port": 8000,
