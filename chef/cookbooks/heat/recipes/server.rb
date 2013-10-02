@@ -18,7 +18,6 @@
 heat_path = "/opt/heat"
 venv_path = node[:heat][:use_virtualenv] ? "#{heat_path}/.venv" : nil
 venv_prefix = node[:heat][:use_virtualenv] ? ". #{venv_path}/bin/activate &&" : nil
-heat_db_sync_cmd = nil
 
 node.set_unless[:heat][:db][:password] = secure_password
 env_filter = " AND database_config_environment:database-config-#{node[:heat][:database_instance]}"
@@ -70,12 +69,9 @@ end
 
 unless node[:heat][:use_gitrepo]
     node[:heat][:platform][:packages].each do |p|
-        puts "Processing cookbook: #{@cookbook_name} package: #{p} platform: #{node.platform}"
         package p
     end
-    heat_db_sync_cmd = "python -m heat.db.sync"
 else
-    puts "Instaling from sources, cookbook: #{@cookbook_name} platform: #{node.platform}"
     pfs_and_install_deps @cookbook_name do
         virtualenv venv_path
         path heat_path
@@ -83,7 +79,6 @@ else
     end
     
     node[:heat][:platform][:services].each do |s|
-        puts "Linking #{s}..."
         link_service s do
             virtualenv venv_path
         end
@@ -92,7 +87,6 @@ else
     create_user_and_dirs("heat")
 
     node[:heat][:platform][:aux_dirs].each do |d|
-        puts "Creating auxilary directory #{d}..." 
         directory d do
            owner node[:heat][:user]
            group "root"
@@ -101,8 +95,6 @@ else
         end
     end
     
-    heat_db_sync_cmd = "#{venv_prefix}python -m heat.db.sync"
-
 end
 include_recipe "#{@cookbook_name}::common"
 env_filter = " AND rabbitmq_config_environment:rabbitmq-config-#{node[:heat][:rabbitmq_instance]}"
@@ -409,7 +401,7 @@ end
 
 execute "heat-db-sync" do
   # do not run heat-db-setup since it wants to install packages and setup db passwords
-  command heat_db_sync_cmd 
+  command "#{venv_prefix}python -m heat.db.sync" 
   action :nothing
 end
 
