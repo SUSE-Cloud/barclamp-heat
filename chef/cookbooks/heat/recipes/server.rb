@@ -18,6 +18,7 @@
 heat_path = "/opt/heat"
 venv_path = node[:heat][:use_virtualenv] ? "#{heat_path}/.venv" : nil
 venv_prefix = node[:heat][:use_virtualenv] ? ". #{venv_path}/bin/activate &&" : nil
+heat_db_sync_cmd = nil
 
 node.set_unless[:heat][:db][:password] = secure_password
 env_filter = " AND database_config_environment:database-config-#{node[:heat][:database_instance]}"
@@ -72,18 +73,24 @@ unless node[:heat][:use_gitrepo]
         puts "Processing cookbook: #{@cookbook_name} package: #{p} platform: #{node.platform}"
         package p
     end
+    heat_db_sync_cmd = "python -m heat.db.sync"
 else
     puts "Instaling from sources, cookbook: #{@cookbook_name} platform: #{node.platform}"
     pfs_and_install_deps @cookbook_name do
         virtualenv venv_path
         path heat_path
+        wrap_bins "heat" 
     end
     
     node[:heat][:platform][:services].each do |s|
         puts "Linking #{s}..."
-        link_service s
-    end 
-   
+        link_service s do
+            virtualenv venv_path
+        end
+    end
+
+    create_user_and_dirs("heat")
+
     node[:heat][:platform][:aux_dirs].each do |d|
         puts "Creating auxilary directory #{d}..." 
         directory d do
@@ -93,6 +100,9 @@ else
            action :create 
         end
     end
+    
+    heat_db_sync_cmd = "#{venv_prefix}python -m heat.db.sync"
+
 end
 include_recipe "#{@cookbook_name}::common"
 env_filter = " AND rabbitmq_config_environment:rabbitmq-config-#{node[:heat][:rabbitmq_instance]}"
@@ -352,11 +362,19 @@ template "/etc/heat/heat-api-cloudwatch.conf" do
     )
 end
 
+template "/etc/heat/heat-api-cloudwatch-paste.ini" do
+    source "heat-api-cloudwatch-paste.ini.erb"
+    owner node[:heat][:user]
+    group "root"
+    mode "0640"
+end
+
 service "heat-api-cloudwatch" do
   service_name "openstack-heat-api-cloudwatch" if node.platform == "suse"
   supports :status => true, :restart => true
   action :enable
   subscribes :restart, resources("template[/etc/heat/heat-api-cloudwatch.conf]")
+  subscribes :restart, resources("template[/etc/heat/heat-api-cloudwatch-paste.ini]")
 end
 
 template "/etc/heat/heat-engine.conf" do
@@ -391,7 +409,7 @@ end
 
 execute "heat-db-sync" do
   # do not run heat-db-setup since it wants to install packages and setup db passwords
-  command "python -m heat.db.sync"
+  command heat_db_sync_cmd 
   action :nothing
 end
 
