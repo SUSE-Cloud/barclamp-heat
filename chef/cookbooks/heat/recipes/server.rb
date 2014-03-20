@@ -241,7 +241,10 @@ template "/etc/heat/heat.conf" do
       :bind_host => bind_host,
       :api_port => api_port,
       :cloud_watch_port => cloud_watch_port,
-      :cfn_port => cfn_port
+      :cfn_port => cfn_port,
+      :heat_metadata_server_url => "#{node[:heat][:api][:protocol]}://#{my_public_host}:#{cfn_port}",
+      :heat_waitcondition_server_url => "#{node[:heat][:api][:protocol]}://#{my_public_host}:#{cfn_port}/v1/waitcondition",
+      :heat_watch_server_url => "#{node[:heat][:api][:protocol]}://#{my_public_host}:#{cloud_watch_port}"
     )
    notifies :run, "execute[heat-db-sync]", :delayed
 end
