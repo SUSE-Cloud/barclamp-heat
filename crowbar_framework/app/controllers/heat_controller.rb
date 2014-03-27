@@ -17,7 +17,10 @@
 #
 
 class HeatController < BarclampController
-  def initialize
+
+  protected
+
+  def initialize_service
     @service_object = HeatService.new logger
   end
 end
