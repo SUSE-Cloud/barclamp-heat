@@ -13,16 +13,28 @@
 # limitations under the License.
 #
 
-class HeatService < ServiceObject
+class HeatService < PacemakerServiceObject
 
   def initialize(thelogger)
+    super(thelogger)
     @bc_name = "heat"
-    @logger = thelogger
   end
 
 # Turn off multi proposal support till it really works and people ask for it.
   def self.allow_multiple_proposals?
     false
+  end
+
+  class << self
+    def role_constraints
+      {
+        "heat-server" => {
+          "unique" => false,
+          "count" => 1,
+          "cluster" => true
+        }
+      }
+    end
   end
 
   def proposal_dependencies(role)
@@ -40,100 +52,56 @@ class HeatService < ServiceObject
     @logger.debug("Heat create_proposal: entering")
     base = super
 
-    base["attributes"][@bc_name]["git_instance"] = ""
-    begin
-      gitService = GitService.new(@logger)
-      gits = gitService.list_active[1]
-      if gits.empty?
-        # No actives, look for proposals
-        gits = gitService.proposals[1]
-      end
-      unless gits.empty?
-        base["attributes"][@bc_name]["git_instance"] = gits[0]
-      end
-    rescue
-      @logger.info("#{@bc_name} create_proposal: no git found")
+    base["attributes"][@bc_name]["git_instance"] = find_dep_proposal("git", true)
+    base["attributes"][@bc_name]["database_instance"] = find_dep_proposal("database")
+    base["attributes"][@bc_name]["rabbitmq_instance"] = find_dep_proposal("rabbitmq")
+    base["attributes"][@bc_name]["keystone_instance"] = find_dep_proposal("keystone")
+
+    nodes = NodeObject.all
+    nodes.delete_if { |n| n.nil? or n.admin? }
+
+    if nodes.size >= 1
+      controller = nodes.find { |n| n.intended_role == "controller" } || nodes.first
+      base["deployment"]["heat"]["elements"] = {
+        "heat-server" =>  [ controller.name ]
+      }
     end
-
-    base["attributes"][@bc_name]["database_instance"] = ""
-    begin
-      databaseService = DatabaseService.new(@logger)
-      databases = databaseService.list_active[1]
-      if databases.empty?
-        # No actives, look for proposals
-        databases = databaseService.proposals[1]
-      end
-      if !databases.empty?
-        base["attributes"][@bc_name]["database_instance"] = databases[0]
-      end
-    rescue
-      @logger.info("#{@bc_name} create_proposal: no database found")
-    end
-
-    base["attributes"][@bc_name]["keystone_instance"] = ""
-    begin
-      keystoneService = KeystoneService.new(@logger)
-      keystones = keystoneService.list_active[1]
-      if keystones.empty?
-        # No actives, look for proposals
-        keystones = keystoneService.proposals[1]
-      end
-      if !keystones.empty?
-        base["attributes"][@bc_name]["keystone_instance"] = keystones[0]
-      end
-    rescue
-      @logger.info("#{@bc_name} create_proposal: no keystone found")
-    end
-
-    if base["attributes"][@bc_name]["keystone_instance"] == ""
-      raise(I18n.t('model.service.dependency_missing', :name => @bc_name, :dependson => "keystone"))
-    end
-
-    base["attributes"][@bc_name]["rabbitmq_instance"] = ""
-    begin
-      rabbitmqService = RabbitmqService.new(@logger)
-      rabbits = rabbitmqService.list_active[1]
-      if rabbits.empty?
-        # No actives, look for proposals
-        rabbits = rabbitmqService.proposals[1]
-      end
-      unless rabbits.empty?
-        base["attributes"][@bc_name]["rabbitmq_instance"] = rabbits[0]
-      end
-    rescue
-      @logger.info("#{@bc_name} create_proposal: no rabbitmq found")
-    end
-
-    if base["attributes"][@bc_name]["rabbitmq_instance"] == ""
-      raise(I18n.t('model.service.dependency_missing', :name => @bc_name, :dependson => "rabbitmq"))
-    end
-
-    agent_nodes = NodeObject.find("roles:nova-multi-compute-kvm") +
-      NodeObject.find("roles:nova-multi-compute-qemu") +
-      NodeObject.find("roles:nova-multi-compute-xen") +
-      NodeObject.find("roles:nova-multi-compute-esxi")
-
-    server_nodes = NodeObject.find("roles:nova-multi-controller")
-
-    base["deployment"]["heat"]["elements"] = {
-        "heat-server" =>  server_nodes.map { |x| x.name }
-    } unless agent_nodes.nil? or server_nodes.nil?
 
     base["attributes"]["heat"]["keystone_service_password"] = '%012d' % rand(1e12)
+    base["attributes"][@bc_name][:db][:password] = random_password
 
     @logger.debug("Heat create_proposal: exiting")
     base
+  end
+
+  def validate_proposal_after_save proposal
+    validate_one_for_role proposal, "heat-server"
+
+    if proposal["attributes"][@bc_name]["use_gitrepo"]
+      validate_dep_proposal_is_active "git", proposal["attributes"][@bc_name]["git_instance"]
+    end
+
+    super
   end
 
   def apply_role_pre_chef_call(old_role, role, all_nodes)
     @logger.debug("Heat apply_role_pre_chef_call: entering #{all_nodes.inspect}")
     return if all_nodes.empty?
 
+    vip_networks = ["admin", "public"]
+
+    server_elements, server_nodes, ha_enabled = role_expand_elements(role, "heat-server")
+
+    role.save if prepare_role_for_ha_with_haproxy(role, ["heat", "ha", "enabled"], ha_enabled, server_elements, vip_networks)
+
     net_svc = NetworkService.new @logger
-    tnodes = role.override_attributes["heat"]["elements"]["heat-server"]
-    tnodes.each do |n|
+    # All nodes must have a public IP, even if part of a cluster; otherwise
+    # the VIP can't be moved to the nodes
+    server_nodes.each do |n|
       net_svc.allocate_ip "default", "public", "host", n
-    end unless tnodes.nil?
+    end
+
+    allocate_virtual_ips_for_any_cluster_in_networks(server_elements, vip_networks)
 
     @logger.debug("Heat apply_role_pre_chef_call: leaving")
   end

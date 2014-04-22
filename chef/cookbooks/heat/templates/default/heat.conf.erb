@@ -4,6 +4,15 @@
 # Options defined in heat.common.config
 #
 
+# The SQLAlchemy connection string used to connect to the
+# database (string value)
+#sql_connection=mysql://heat:heat@localhost/heat
+sql_connection=<%= @database_connection %>
+
+# timeout before idle sql connections are reaped (integer
+# value)
+#sql_idle_timeout=3600
+
 # The default user for new instances (string value)
 #instance_user=ec2-user
 
@@ -14,7 +23,7 @@
 #plugin_dirs=/usr/lib64/heat,/usr/lib/heat
 
 # The directory to search for environment files (string value)
-environment_dir=/etc/heat/environment.d
+#environment_dir=/etc/heat/environment.d
 
 # Select deferred auth method, stored password or trusts
 # (string value)
@@ -51,13 +60,13 @@ environment_dir=/etc/heat/environment.d
 #periodic_interval=60
 
 # URL of the Heat metadata server (string value)
-heat_metadata_server_url=http://127.0.0.1:8000
+heat_metadata_server_url=<%= @heat_metadata_server_url %>
 
 # URL of the Heat waitcondition server (string value)
-heat_waitcondition_server_url=http://127.0.0.1:8000/v1/waitcondition
+heat_waitcondition_server_url=<%= @heat_waitcondition_server_url %>
 
 # URL of the Heat cloudwatch server (string value)
-heat_watch_server_url=http://127.0.0.1:8003
+heat_watch_server_url=<%= @heat_watch_server_url %>
 
 # Instance connection to cfn/cw API via https (string value)
 instance_connection_is_secure=0
@@ -100,8 +109,8 @@ auth_encryption_key=%ENCRYPTION_KEY%
 #
 
 # The backend to use for db (string value)
-#db_backend=heat.db.sqlalchemy.api
-sql_connection=<%= @database_connection %>
+#db_backend=sqlalchemy
+
 
 #
 # Options defined in heat.engine.clients
@@ -146,7 +155,7 @@ sql_connection=<%= @database_connection %>
 #disable_process_locking=false
 
 # Directory to use for lock files. (string value)
-#lock_path=<None>
+lock_path=/var/run/heat
 
 
 #
@@ -213,11 +222,11 @@ use_stderr=false
 
 # Format string for %%(asctime)s in log records. Default:
 # %(default)s (string value)
-log_date_format=%Y-%m-%d %H:%M:%S
+#log_date_format=%Y-%m-%d %H:%M:%S
 
 # (Optional) Name of log file to output to. If no default is
 # set, logging will go to stdout. (string value)
-log_file=heat-engine.log
+#log_file=<None>
 
 # (Optional) The base directory used for relative --log-file
 # paths (string value)
@@ -268,7 +277,7 @@ log_dir=/var/log/heat
 #
 
 # JSON file containing policy (string value)
-#policy_file=default
+#policy_file=policy.json
 
 # Rule enforced when requested rule is not found (string
 # value)
@@ -281,7 +290,7 @@ log_dir=/var/log/heat
 
 # The messaging module to use, defaults to kombu. (string
 # value)
-#rpc_backend=default
+#rpc_backend=heat.openstack.common.rpc.impl_kombu
 
 # Size of RPC thread pool (integer value)
 #rpc_thread_pool_size=64
@@ -504,7 +513,8 @@ rabbit_virtual_host=<%= @rabbit_settings[:vhost] %>
 
 # The SQLAlchemy connection string used to connect to the
 # database (string value)
-#connection=
+#connection=sqlite:////heat/openstack/common/db/$sqlite_db
+connection=<%= @database_connection %>
 
 # The SQLAlchemy connection string used to connect to the
 # slave database (string value)
@@ -557,7 +567,7 @@ rabbit_virtual_host=<%= @rabbit_settings[:vhost] %>
 #flavor=<None>
 
 # The API paste config file to use (string value)
-api_paste_config=api-paste.ini
+#api_paste_config=api-paste.ini
 
 
 [rpc_notifier2]
@@ -577,7 +587,7 @@ api_paste_config=api-paste.ini
 #
 
 # Authentication Endpoint URI (string value)
-auth_uri=<%= @keystone_protocol %>://<%= @keystone_host %>:<%= @keystone_service_port %>/v2.0
+auth_uri=<%= @keystone_settings['internal_auth_url'] %>
 
 # Allow orchestration of multiple clouds (boolean value)
 #multi_cloud=false
@@ -594,15 +604,12 @@ auth_uri=<%= @keystone_protocol %>://<%= @keystone_host %>:<%= @keystone_service
 # Options defined in heat.common.wsgi
 #
 
-log_file=heat_api_cloudwatch.log
-
-
 # Address to bind the server.  Useful when selecting a
 # particular network interface. (string value)
-bind_host=0.0.0.0
+bind_host=<%= @bind_host %>
 
 # The port on which the server will listen. (integer value)
-bind_port=<%= node[:heat][:api][:cw_port] %>
+bind_port=<%= @cloud_watch_port %>
 
 # Number of backlog requests to configure the socket with
 # (integer value)
@@ -626,14 +633,12 @@ bind_port=<%= node[:heat][:api][:cw_port] %>
 # Options defined in heat.common.wsgi
 #
 
-log_file=heat_api.log
-
 # Address to bind the server.  Useful when selecting a
 # particular network interface. (string value)
-bind_host=0.0.0.0
+bind_host=<%= @bind_host %>
 
 # The port on which the server will listen. (integer value)
-bind_port=<%= node[:heat][:api][:port] %>
+bind_port=<%= @api_port %>
 
 # Number of backlog requests to configure the socket with
 # (integer value)
@@ -657,14 +662,12 @@ bind_port=<%= node[:heat][:api][:port] %>
 # Options defined in heat.common.wsgi
 #
 
-log_file=heat_api_cfn.log
-
 # Address to bind the server.  Useful when selecting a
 # particular network interface. (string value)
-bind_host=0.0.0.0
+bind_host=<%= @bind_host %>
 
 # The port on which the server will listen. (integer value)
-bind_port=<%= node[:heat][:api][:cfn_port] %>
+bind_port=<%= @cfn_port %>
 
 # Number of backlog requests to configure the socket with
 # (integer value)
@@ -694,17 +697,17 @@ bind_port=<%= node[:heat][:api][:cfn_port] %>
 
 # Host providing the admin Identity API endpoint (string
 # value)
-#auth_host=
+auth_host=<%= @keystone_settings['internal_url_host'] %>
 
 # Port of the admin Identity API endpoint (integer value)
 #auth_port=
 
 # Protocol of the admin Identity API endpoint(http or https)
 # (string value)
-auth_protocol=<%= @keystone_protocol %>
+auth_protocol=<%= @keystone_settings['protocol'] %>
 
 # Complete public Identity API endpoint (string value)
-auth_uri=<%= @keystone_protocol %>://<%= @keystone_host %>:<%= @keystone_service_port %>/v2.0
+auth_uri=<%= @keystone_settings['internal_auth_url'] %>
 
 # API version of the admin Identity API endpoint (string
 # value)
@@ -732,17 +735,17 @@ auth_uri=<%= @keystone_protocol %>://<%= @keystone_host %>:<%= @keystone_service
 # Single shared secret with the Keystone configuration used
 # for bootstrapping a Keystone installation, or otherwise
 # bypassing the normal authentication process. (string value)
-admin_token=<%= @keystone_auth_token %>
+admin_token=<%= @keystone_settings['admin_token'] %>
 
 # Keystone account username (string value)
-admin_user=<%= @keystone_service_user %>
+admin_user=<%= @keystone_settings['service_user'] %>
 
 # Keystone account password (string value)
-#admin_password=<%= @keystone_service_password %>
+admin_password=<%= @keystone_settings['service_password'] %>
 
 # Keystone service account tenant name to validate user tokens
 # (string value)
-admin_tenant_name=<%= @keystone_service_tenant %>
+admin_tenant_name=<%= @keystone_settings['service_tenant'] %>
 
 # Env key for the swift cache (string value)
 #cache=<None>
@@ -760,11 +763,13 @@ admin_tenant_name=<%= @keystone_service_tenant %>
 #cafile=<None>
 
 # Verify HTTPS connections. (boolean value)
-#insecure=false
+<% if @keystone_settings['insecure'] -%>
+insecure = <%= @keystone_settings['insecure'] %>
+<% end -%>
 
 # Directory used to cache files related to PKI tokens (string
 # value)
-#signing_dir=<None>
+signing_dir=/var/cache/heat/keystone-signing
 
 # If defined, the memcache server(s) to use for caching (list
 # value)
@@ -834,3 +839,5 @@ admin_tenant_name=<%= @keystone_service_tenant %>
 
 # Password for Redis server. (optional) (string value)
 #password=<None>
+
+

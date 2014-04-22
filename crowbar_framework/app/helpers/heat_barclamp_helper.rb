@@ -1,5 +1,5 @@
-#!/usr/bin/env ruby
-# Copyright 2013, SUSE, Inc.
+# Copyright 2011-2013, Dell
+# Copyright 2013, SUSE LINUX Products GmbH
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,10 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Author: Dell Crowbar Team
+# Author: SUSE LINUX Products GmbH
+#
 
-
-require File.join(File.expand_path(File.dirname(__FILE__)), "barclamp_lib")
-@barclamp = "heat"
-@timeout = 3600
-
-main
+module HeatBarclampHelper
+end

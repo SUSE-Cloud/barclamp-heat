@@ -15,11 +15,12 @@
 barclamp:
   name: heat
   display: Heat
-  description: 'OpenStack Orchestration: orchestrate multiple composite cloud applications using the AWS CloudFormation template format'
+  description: 'Orchestration Module: Orchestration engine for composite cloud applications'
   proposal_schema_version: 1
   version: 0
   requires:
     - '@crowbar'
+    - pacemaker
     - git
     - database
     - rabbitmq
@@ -54,21 +55,6 @@ debs:
     - heat-api-cloudwatch
     - heat-common
     - heat-engine
-
-locale_additions:
-  en:
-    nav:
-      heat: Heat
-    barclamp:
-      heat:
-        edit_attributes: 
-          attributes: Attributes
-          verbose: Setup Verbose Logging
-          database_instance: Database
-          keystone_instance: Keystone
-          rabbitmq_instance: RabbitMQ
-      heat_edit_deployment: 
-        deployment: Deployment
 
 pips:
   - python-heatclient
