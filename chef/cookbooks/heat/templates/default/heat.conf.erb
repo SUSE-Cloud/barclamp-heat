@@ -281,7 +281,7 @@ log_dir=/var/log/heat
 
 # The messaging module to use, defaults to kombu. (string
 # value)
-#rpc_backend=default
+rpc_backend = heat.openstack.common.rpc.impl_kombu
 
 # Size of RPC thread pool (integer value)
 #rpc_thread_pool_size=64

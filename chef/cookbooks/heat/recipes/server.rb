@@ -287,36 +287,13 @@ template "/etc/heat/api-paste.ini" do
     )
 end
 
-service "heat-engine" do
-  service_name "openstack-heat-engine" if node.platform == "suse"
-  supports :status => true, :restart => true
-  action :enable
-  subscribes :restart, resources("template[/etc/heat/heat.conf]")
-  subscribes :restart, resources("template[/etc/heat/api-paste.ini]")
-end
-
-service "heat-api" do
-  service_name "openstack-heat-api" if node.platform == "suse"
-  supports :status => true, :restart => true
-  action :enable
-  subscribes :restart, resources("template[/etc/heat/heat.conf]")
-  subscribes :restart, resources("template[/etc/heat/api-paste.ini]")
-end
-
-service "heat-api-cfn" do
-  service_name "openstack-heat-api-cfn" if node.platform == "suse"
-  supports :status => true, :restart => true
-  action :enable
-  subscribes :restart, resources("template[/etc/heat/heat.conf]")
-  subscribes :restart, resources("template[/etc/heat/api-paste.ini]")
-end
-
-service "heat-api-cloudwatch" do
-  service_name "openstack-heat-api-cloudwatch" if node.platform == "suse"
-  supports :status => true, :restart => true
-  action :enable
-  subscribes :restart, resources("template[/etc/heat/heat.conf]")
-  subscribes :restart, resources("template[/etc/heat/api-paste.ini]")
+node[:heat][:platform][:services].each do |s|
+  service "#{s}" do
+    supports :status => true, :restart => true
+    action :enable
+    subscribes :restart, resources("template[/etc/heat/heat.conf]")
+    subscribes :restart, resources("template[/etc/heat/api-paste.ini]")
+  end
 end
 
 execute "heat-db-sync" do
