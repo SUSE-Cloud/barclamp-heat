@@ -16,26 +16,23 @@
 #
 
 barclamp:
-  name: heat
-  display: Heat
+  name: 'heat'
+  display: 'Heat'
   description: 'Orchestration Module: Orchestration engine for composite cloud applications'
-  proposal_schema_version: 1
   version: 0
+  member:
+    - 'openstack'
   requires:
     - '@crowbar'
-    - pacemaker
-    - git
-    - database
-    - rabbitmq
-    - keystone
-    - neutron
-    - cinder
-    - glance
-    - nova
-  member:
-    - openstack 
-  os_support:
-    - ubuntu-12.04
+    - 'pacemaker'
+    - 'git'
+    - 'database'
+    - 'rabbitmq'
+    - 'keystone'
+    - 'neutron'
+    - 'cinder'
+    - 'glance'
+    - 'nova'
 
 crowbar:
   layout: 1
@@ -47,20 +44,20 @@ crowbar:
 debs:
   ubuntu-12.04:
     repos:
-      - deb http://ubuntu-cloud.archive.canonical.com/ubuntu precise-updates/grizzly main
-      - deb http://ubuntu-cloud.archive.canonical.com/ubuntu precise-proposed/grizzly main
+      - 'deb http://ubuntu-cloud.archive.canonical.com/ubuntu precise-updates/grizzly main'
+      - 'deb http://ubuntu-cloud.archive.canonical.com/ubuntu precise-proposed/grizzly main'
   pkgs:
-    - heat-api
-    - python-heat
-    - python-heatclient
-    - python-keystone
-    - heat-api-cfn
-    - heat-api-cloudwatch
-    - heat-common
-    - heat-engine
+    - 'heat-api'
+    - 'python-heat'
+    - 'python-heatclient'
+    - 'python-keystone'
+    - 'heat-api-cfn'
+    - 'heat-api-cloudwatch'
+    - 'heat-common'
+    - 'heat-engine'
 
 pips:
-  - python-heatclient
+  - 'python-heatclient'
 
 git_repo:
-  - heat https://github.com/openstack/heat.git stable/icehouse
+  - 'heat https://github.com/openstack/heat.git stable/icehouse'
