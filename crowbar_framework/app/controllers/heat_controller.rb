@@ -23,4 +23,8 @@ class HeatController < BarclampController
   def initialize_service
     @service_object = HeatService.new logger
   end
+
+  def permitted_params
+    params.require(:heat)
+  end
 end
