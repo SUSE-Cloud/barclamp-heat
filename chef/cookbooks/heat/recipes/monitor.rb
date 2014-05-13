@@ -1,3 +1,4 @@
+# -*- encoding : utf-8 -*-
 svcs = []
 ports = {}
 node.default[:heat][:platform][:services].each {|svc| svcs << svc}
