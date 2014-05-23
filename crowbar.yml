@@ -33,6 +33,9 @@ barclamp:
   os_support:
     - ubuntu-12.04
 
+smoketest:
+  timeout: 600
+
 crowbar:
   layout: 1
   order: 101 
@@ -43,8 +46,8 @@ crowbar:
 debs:
   ubuntu-12.04:
     repos:
-      - deb http://ubuntu-cloud.archive.canonical.com/ubuntu precise-updates/grizzly main
-      - deb http://ubuntu-cloud.archive.canonical.com/ubuntu precise-proposed/grizzly main
+      - deb http://ubuntu-cloud.archive.canonical.com/ubuntu precise-updates/havana main
+      - deb http://ubuntu-cloud.archive.canonical.com/ubuntu precise-proposed/havana main
   pkgs:
     - heat-api
     - python-heat
@@ -54,6 +57,21 @@ debs:
     - heat-api-cloudwatch
     - heat-common
     - heat-engine
+
+rpms:
+  centos-6.5:
+    repos:
+      - rpm http://repos.fedorapeople.org/repos/openstack/openstack-havana/epel-6
+  redhat-6.5:
+    repos:
+      - rpm http://repos.fedorapeople.org/repos/openstack/openstack-havana/epel-6
+  pkgs:
+    - openstack-heat-api
+    - openstack-heat-engine
+    - python-heatclient
+    - openstack-heat-api-cfn
+    - openstack-heat-common
+    - openstack-heat-api-cloudwatch
 
 locale_additions:
   en:

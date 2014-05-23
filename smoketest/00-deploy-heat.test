@@ -76,7 +76,6 @@ cleanup() {
             while heat list |grep -q "$stack_id"; do sleep 1; done
         done
         nova keypair-delete "$tested_service_name-smoketest"
-        ssh-agent -k
         nova flavor-delete "$test_flavor"
        for g in $(neutron security-group-list | grep 'heat*' | awk {'print $2'}); do
          echo -e "Deleting security group: $g"
@@ -171,3 +170,5 @@ for addr in "${stack_ips[@]}";do
   done
   [[ "${alive_stacks[$addr]}" = true ]] && echo -e "\nSUCCESS: Stack_ip: $addr responded on ping attempt $i\n" || echo -e "\nFAILURE: Stack_ip: $addr is not responding\n"
 done
+
+exit 0

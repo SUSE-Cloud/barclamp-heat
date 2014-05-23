@@ -29,7 +29,15 @@ case node["platform"]
             :aux_dirs => ["/var/cache/heat","/etc/heat/environment.d"]
         }
         default[:heat][:user] = "openstack-heat"
-        default[:heat][:group] = "openstak-heat"
+        default[:heat][:group] = "openstack-heat"
+    when /^(centos|redhat)$/
+         default[:heat][:platform] = {
+            :packages => ["openstack-heat-engine","openstack-heat-api","openstack-heat-api-cfn","openstack-heat-api-cloudwatch","python-heatclient"],
+            :services => ["openstack-heat-engine","openstack-heat-api","openstack-heat-api-cfn","openstack-heat-api-cloudwatch"],
+            :aux_dirs => ["/var/cache/heat","/etc/heat/environment.d"]
+        }
+        default[:heat][:user] = "heat"
+        default[:heat][:group] = "heat"
 end
 
 default[:heat][:debug] = false
