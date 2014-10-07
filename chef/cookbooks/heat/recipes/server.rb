@@ -169,28 +169,84 @@ bash "register heat domain" do
 
     OS_URL="#{keystone_settings['protocol']}://#{keystone_settings['internal_url_host']}:#{keystone_settings['service_port']}/v3"
 
+    # Find domain ID
+    id=
     eval $(openstack --os-token #{keystone_settings['admin_token']} \
         --os-url=$OS_URL \
-        --os-identity-api-version=3 domain show -f shell --variable id #{stack_user_domain_name})
+        --os-identity-api-version=3 \
+        domain show -f shell --variable id \
+        #{stack_user_domain_name})
 
     HEAT_DOMAIN_ID=$id
 
     if [ -z "$HEAT_DOMAIN_ID" ]; then
-        HEAT_DOMAIN_ID=$(openstack --os-token #{keystone_settings['admin_token']} \
+        id=
+        eval $(openstack --os-token #{keystone_settings['admin_token']} \
             --os-url=$OS_URL \
-            --os-identity-api-version=3 domain create #{stack_user_domain_name} \
+            --os-identity-api-version=3 \
+            domain create -f shell --variable id \
             --description "Owns users and projects created by heat" \
-            | awk '/id/  { print $4 } ')
+            #{stack_user_domain_name})
+        HEAT_DOMAIN_ID=$id
     fi
 
-    openstack --os-token #{keystone_settings['admin_token']} --os-url=$OS_URL \
-        --os-identity-api-version=3 user create --password #{node[:heat]["stack_domain_admin_password"]} \
-        --domain $HEAT_DOMAIN_ID #{node[:heat]["stack_domain_admin"]} \
-        --description "Manages users and projects created by heat" || true
+    [ -n "$HEAT_DOMAIN_ID" ] || exit 1
 
+    # Find user ID
+    STACK_DOMAIN_ADMIN_ID=
+
+    # we need to loop, as there might be users with this name in different
+    # domains; unfortunately --domain doesn't allow fetching users from just
+    # one domain
+    for userid in $(openstack --os-token #{keystone_settings['admin_token']} \
+                        --os-url=$OS_URL \
+                        --os-identity-api-version=3 \
+                        user list \
+                        --domain $HEAT_DOMAIN_ID \
+                        -f csv | grep \"heat_domain_admin\" | cut -d , -f 1 | sed 's/"//g'); do
+        domain_id=
+        eval $(openstack --os-token #{keystone_settings['admin_token']} \
+            --os-url=$OS_URL \
+            --os-identity-api-version=3 \
+            user show -f shell --variable domain_id \
+            $userid)
+
+        if [ x"$domain_id" = x"$HEAT_DOMAIN_ID" ]; then
+            STACK_DOMAIN_ADMIN_ID=$userid
+            openstack --os-token #{keystone_settings['admin_token']} \
+                --os-url=$OS_URL \
+                --os-identity-api-version=3 \
+                user set \
+                --password #{node[:heat]["stack_domain_admin_password"]} \
+                --domain $HEAT_DOMAIN_ID \
+                --description "Manages users and projects created by heat" \
+                $STACK_DOMAIN_ADMIN_ID
+            break
+        fi
+    done
+
+    if [ -z "$STACK_DOMAIN_ADMIN_ID" ]; then
+        id=
+        eval $(openstack --os-token #{keystone_settings['admin_token']} \
+            --os-url=$OS_URL \
+            --os-identity-api-version=3 \
+            user create -f shell --variable id \
+            --password #{node[:heat]["stack_domain_admin_password"]} \
+            --domain $HEAT_DOMAIN_ID \
+            --description "Manages users and projects created by heat" \
+            #{node[:heat]["stack_domain_admin"]})
+        STACK_DOMAIN_ADMIN_ID=$id
+    fi
+
+    [ -n "$STACK_DOMAIN_ADMIN_ID" ] || exit 1
+
+    # Make user an admin
     openstack --os-token #{keystone_settings['admin_token']} --os-url=$OS_URL \
-        --os-identity-api-version=3 role add --user #{node[:heat]["stack_domain_admin"]} \
-        --domain $HEAT_DOMAIN_ID admin || true
+        --os-identity-api-version=3 \
+        role add \
+        --user $STACK_DOMAIN_ADMIN_ID \
+        --domain $HEAT_DOMAIN_ID \
+        admin
   EOF
 end
 
